@@ -1,4 +1,4 @@
-# XrayOpenWRT
+# Xray-OpenWrt-Guide
 Get xray from:
 - https://github.com/yichya/openwrt-xray
 
