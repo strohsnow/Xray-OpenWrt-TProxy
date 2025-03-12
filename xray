@@ -17,6 +17,7 @@ XRAY_USER="xray"
 XRAY_GID=10000
 
 XRAY_BINARY="/usr/bin/xray"
+XRAY_ASSETS="/usr/share/xray"
 XRAY_CONFIG="/etc/xray/config.json"
 
 add_routing_policy() {
@@ -79,7 +80,7 @@ start_xray() {
     add_xray_user
 
     ulimit -SHn 1000000
-    sudo -u $XRAY_USER $XRAY_BINARY -c $XRAY_CONFIG >/dev/null 2>&1 &
+    sudo -u $XRAY_USER env XRAY_LOCATION_ASSET=$XRAY_ASSETS $XRAY_BINARY -c $XRAY_CONFIG >/dev/null 2>&1 &
 }
 
 start() {
