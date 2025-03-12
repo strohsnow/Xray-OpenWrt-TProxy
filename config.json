@@ -1,0 +1,125 @@
+{
+  "log": {
+    "loglevel": "none"
+  },
+  "dns": {
+    "hosts": {
+      "your.domain.com": "your.server.ip.address"
+    },
+    "servers": [
+      "localhost",
+      {
+        "address": "1.1.1.1",
+        "domains": [
+          "geosite:refilter"
+        ]
+      },
+      {
+        "address": "1.0.0.1",
+        "domains": [
+          "geosite:refilter"
+        ]
+      }
+    ],
+    "queryStrategy": "UseIPv4",
+    "disableFallbackIfMatch": true
+  },
+  "inbounds": [
+    {
+      "tag": "tproxy-in",
+      "port": 12345,
+      "protocol": "dokodemo-door",
+      "settings": {
+        "network": "tcp,udp",
+        "followRedirect": true
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": [
+          "http",
+          "tls",
+          "quic"
+        ]
+      },
+      "streamSettings": {
+        "sockopt": {
+          "tproxy": "tproxy"
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "direct",
+      "protocol": "freedom",
+      "settings": {
+        "domainStrategy": "UseIPv4"
+      }
+    },
+    {
+      "tag": "proxy",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "your.domain.com",
+            "port": 443,
+            "users": [
+              {
+                "id": "your-user-uuid-on-server",
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "raw",
+        "security": "reality",
+        "realitySettings": {
+          "fingerprint": "chrome",
+          "serverName": "your.domain.com",
+          "publicKey": "YOUR_PUBLIC_KEY",
+          "shortId": "",
+          "spiderX": ""
+        }
+      }
+    },
+    {
+      "tag": "dns-out",
+      "protocol": "dns"
+    }
+  ],
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "inboundTag": [
+          "tproxy-in"
+        ],
+        "port": 53,
+        "outboundTag": "dns-out"
+      },
+      {
+        "ip": [
+          "1.1.1.1",
+          "1.0.0.1"
+        ],
+        "outboundTag": "proxy"
+      },
+      {
+        "domain": [
+          "geosite:refilter"
+        ],
+        "outboundTag": "proxy"
+      },
+      {
+        "ip": [
+          "geoip:refilter"
+        ],
+        "outboundTag": "proxy"
+      }
+    ]
+  }
+}
