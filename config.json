@@ -7,16 +7,19 @@
       "your.domain.com": "your.server.ip.address"
     },
     "servers": [
-      "localhost",
+      "https+local://77.88.8.8/dns-query",
+      "https+local://77.88.8.1/dns-query",
       {
-        "address": "1.1.1.1",
+        "address": "https://1.1.1.1/dns-query",
         "domains": [
+          "geosite:cloudflare",
           "geosite:ru-blocked"
         ]
       },
       {
-        "address": "1.0.0.1",
+        "address": "https://1.0.0.1/dns-query",
         "domains": [
+          "geosite:cloudflare",
           "geosite:ru-blocked"
         ]
       }
@@ -84,26 +87,21 @@
           "shortId": "",
           "spiderX": ""
         }
+      },
+      "mux": {
+        "enabled": true,
+        "concurrency": -1,
+        "xudpConcurrency": 16
       }
     },
     {
       "tag": "dns-out",
       "protocol": "dns"
-    },
-    {
-      "tag": "block",
-      "protocol": "blackhole"
     }
   ],
   "routing": {
     "domainStrategy": "IPIfNonMatch",
     "rules": [
-      {
-        "domain": [
-          "geosite:category-ads-all"
-        ],
-        "outboundTag": "block"
-      },
       {
         "inboundTag": [
           "tproxy-in"
@@ -113,21 +111,16 @@
       },
       {
         "ip": [
-          "1.1.1.1",
-          "1.0.0.1"
+          "geoip:cloudflare",
+          "geoip:ru-blocked-community",
+          "geoip:re-filter"
         ],
         "outboundTag": "proxy"
       },
       {
         "domain": [
+          "geosite:cloudflare",
           "geosite:ru-blocked"
-        ],
-        "outboundTag": "proxy"
-      },
-      {
-        "ip": [
-          "geoip:ru-blocked-community",
-          "geoip:re-filter"
         ],
         "outboundTag": "proxy"
       }
