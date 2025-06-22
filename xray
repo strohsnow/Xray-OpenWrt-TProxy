@@ -57,15 +57,6 @@ add_iptables_output_rules() {
     iptables -t mangle -A OUTPUT -p udp -j XRAY_MASK
 }
 
-add_iptables_divert_rules() {
-    iptables -t mangle -N DIVERT
-
-    iptables -t mangle -A DIVERT -j MARK --set-mark $TPROXY_MARK
-    iptables -t mangle -A DIVERT -j ACCEPT
-
-    iptables -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
-}
-
 add_xray_user() {
     grep -qw $XRAY_USER /etc/passwd || echo "$XRAY_USER:x:0:$XRAY_GID:::/bin/false" >> /etc/passwd
 }
@@ -75,7 +66,6 @@ start_xray() {
 
     add_iptables_prerouting_rules
     add_iptables_output_rules
-    add_iptables_divert_rules
 
     add_xray_user
 
@@ -112,13 +102,6 @@ del_iptables_output_rules() {
     iptables -t mangle -X XRAY_MASK
 }
 
-del_iptables_divert_rules() {
-    iptables -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
-
-    iptables -t mangle -F DIVERT
-    iptables -t mangle -X DIVERT
-}
-
 del_xray_user() {
     grep -qw $XRAY_USER /etc/passwd && sed -i "/^$XRAY_USER:/d" /etc/passwd
 }
@@ -128,7 +111,6 @@ stop_xray() {
 
     del_iptables_prerouting_rules
     del_iptables_output_rules
-    del_iptables_divert_rules
 
     del_xray_user
 
@@ -136,11 +118,6 @@ stop_xray() {
 }
 
 stop() {
-    if ! pgrep -x $XRAY_BINARY >/dev/null 2>&1; then
-        echo "xray is already stopped"
-        return 0
-    fi
-
     stop_xray
 }
 
