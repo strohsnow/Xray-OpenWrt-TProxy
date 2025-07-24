@@ -8,16 +8,8 @@
     },
     "servers": [
       "https+local://77.88.8.8/dns-query",
-      "https+local://77.88.8.1/dns-query",
       {
         "address": "https://1.1.1.1/dns-query",
-        "domains": [
-          "geosite:cloudflare",
-          "geosite:ru-blocked"
-        ]
-      },
-      {
-        "address": "https://1.0.0.1/dns-query",
         "domains": [
           "geosite:cloudflare",
           "geosite:ru-blocked"
@@ -40,8 +32,7 @@
         "enabled": true,
         "destOverride": [
           "http",
-          "tls",
-          "quic"
+          "tls"
         ]
       },
       "streamSettings": {
@@ -95,7 +86,7 @@
       }
     },
     {
-      "tag": "dns-out",
+      "tag": "dns",
       "protocol": "dns"
     }
   ],
@@ -107,7 +98,7 @@
           "tproxy-in"
         ],
         "port": 53,
-        "outboundTag": "dns-out"
+        "outboundTag": "dns"
       },
       {
         "ip": [
