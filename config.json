@@ -53,7 +53,7 @@
       "settings": {
         "vnext": [
           {
-            "address": "your.domain.com",
+            "address": "your.server.ipv4.address",
             "port": 443,
             "users": [
               {
