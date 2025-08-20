@@ -78,11 +78,6 @@
           "shortId": "",
           "spiderX": ""
         }
-      },
-      "mux": {
-        "enabled": true,
-        "concurrency": -1,
-        "xudpConcurrency": 16
       }
     },
     {
