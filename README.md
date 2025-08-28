@@ -8,5 +8,4 @@
 - Run `chmod +x /etc/init.d/xray`
 - Copy `config.json` to `/etc/xray/config.json`
 - Adjust `/etc/xray/config.json` accordingly
-- Run `service xray update` to download geofiles
-- Run `service xray start` to start xray
+- Run `service xray update` to download geofiles and start xray
