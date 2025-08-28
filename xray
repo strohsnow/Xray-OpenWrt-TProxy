@@ -2,129 +2,171 @@
 
 START=99
 
-EXTRA_COMMANDS="status"
-EXTRA_HELP="        status          Check xray status"
+EXTRA_COMMANDS="status update"
+EXTRA_HELP="        status          Show xray status
+        update          Update xray geofiles"
+
+SUBNET_RES="10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 224.0.0.0/3"
 
 TABLE_NUM=100
-
-SUBNET_LAN="192.168.0.0/16"
-SUBNET_RES="10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 224.0.0.0/3"
-
-TPROXY_MARK=255
+TPROXY_MARK=0xff
 TPROXY_PORT=12345
+NFT_CONFIG="/etc/nftables.d/xray.nft"
 
 XRAY_USER="xray"
+XRAY_GROUP="xray"
+XRAY_UID=0
 XRAY_GID=10000
 
 XRAY_BINARY="/usr/bin/xray"
 XRAY_ASSETS="/usr/share/xray"
 XRAY_CONFIG="/etc/xray/config.json"
+XRAY_PIDFILE="/var/run/xray.pid"
 
-add_routing_policy() {
-    ip rule add fwmark $TPROXY_MARK table $TABLE_NUM
-    ip route add local default dev lo table $TABLE_NUM
+XRAY_GEOIP="$XRAY_ASSETS/geoip.dat"
+XRAY_GEOSITE="$XRAY_ASSETS/geosite.dat"
+GEOIP_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geoip.dat"
+GEOSITE_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geosite.dat"
+
+add_policy_routing() {
+    if ! ip rule list | grep -q "fwmark $TPROXY_MARK lookup $TABLE_NUM"; then
+        ip rule add fwmark $TPROXY_MARK table $TABLE_NUM
+    fi
+    if ! ip route show table $TABLE_NUM | grep -q "local default dev lo"; then
+        ip route add local default dev lo table $TABLE_NUM
+    fi
 }
 
-add_iptables_prerouting_rules() {
-    iptables -t mangle -N XRAY
-
-    iptables -t mangle -A XRAY ! -s $SUBNET_LAN -j RETURN
-
-    for SUBNET in $SUBNET_RES; do iptables -t mangle -A XRAY -d $SUBNET -j RETURN; done
-
-    iptables -t mangle -A XRAY -d $SUBNET_LAN -p tcp ! --dport 53 -j RETURN
-    iptables -t mangle -A XRAY -d $SUBNET_LAN -p udp ! --dport 53 -j RETURN
-
-    iptables -t mangle -A XRAY -p tcp -j TPROXY --on-port $TPROXY_PORT --tproxy-mark $TPROXY_MARK
-    iptables -t mangle -A XRAY -p udp -j TPROXY --on-port $TPROXY_PORT --tproxy-mark $TPROXY_MARK
-
-    iptables -t mangle -A PREROUTING -j XRAY
+del_policy_routing() {
+    if ip rule list | grep -q "fwmark $TPROXY_MARK lookup $TABLE_NUM"; then
+        ip rule del fwmark $TPROXY_MARK table $TABLE_NUM
+    fi
+    if ip route show table $TABLE_NUM | grep -q "local default dev lo"; then
+        ip route del local default dev lo table $TABLE_NUM
+    fi
 }
 
-add_iptables_output_rules() {
-    iptables -t mangle -N XRAY_MASK
-
-    iptables -t mangle -A XRAY_MASK -m owner --gid-owner $XRAY_GID -j RETURN
-
-    for SUBNET in $SUBNET_RES; do iptables -t mangle -A XRAY_MASK -d $SUBNET -j RETURN; done
-
-    iptables -t mangle -A XRAY_MASK -d $SUBNET_LAN -p tcp ! --dport 53 -j RETURN
-    iptables -t mangle -A XRAY_MASK -d $SUBNET_LAN -p udp ! --dport 53 -j RETURN
-
-    iptables -t mangle -A XRAY_MASK -j MARK --set-mark $TPROXY_MARK
-
-    iptables -t mangle -A OUTPUT -p tcp -j XRAY_MASK
-    iptables -t mangle -A OUTPUT -p udp -j XRAY_MASK
+add_xray_user_group() {
+    if ! grep -q "^$XRAY_USER:" /etc/passwd; then
+        echo "$XRAY_USER:x:$XRAY_UID:$XRAY_GID::/var:/bin/false" >> /etc/passwd
+    fi
+    if ! grep -q "^$XRAY_GROUP:" /etc/group; then
+        echo "$XRAY_GROUP:x:$XRAY_GID:$XRAY_USER" >> /etc/group
+    fi
 }
 
-add_xray_user() {
-    grep -qw $XRAY_USER /etc/passwd || echo "$XRAY_USER:x:0:$XRAY_GID:::/bin/false" >> /etc/passwd
+del_xray_user_group() {
+    if grep -q "^$XRAY_USER:" /etc/passwd; then
+        sed -i "/^$XRAY_USER:/d" /etc/passwd
+    fi
+    if grep -q "^$XRAY_GROUP:" /etc/group; then
+        sed -i "/^$XRAY_GROUP:/d" /etc/group
+    fi
+}
+
+add_nft_config() {
+    cat >$NFT_CONFIG <<EOF
+define res_subnets = { $SUBNET_RES }
+
+chain xray_divert {
+    type filter hook prerouting priority mangle - 10; policy accept;
+
+    socket transparent 1 meta skgid $XRAY_GID meta mark set $TPROXY_MARK
+}
+
+chain xray_prerouting {
+    type filter hook prerouting priority mangle; policy accept;
+
+    ip saddr != \$lan_subnets return
+    ip daddr \$res_subnets return
+
+    ip daddr \$lan_subnets tcp dport != 53 return
+    ip daddr \$lan_subnets udp dport != 53 return
+
+    meta l4proto { tcp, udp } tproxy ip to 127.0.0.1:$TPROXY_PORT meta mark set $TPROXY_MARK
+}
+
+chain xray_output {
+    type route hook output priority mangle; policy accept;
+
+    meta skgid $XRAY_GID return
+    ip daddr \$res_subnets return
+
+    ip daddr \$lan_subnets tcp dport != 53 return
+    ip daddr \$lan_subnets udp dport != 53 return
+
+    meta mark set $TPROXY_MARK
+}
+EOF
+    fw4 reload
+}
+
+del_nft_config() {
+    rm -f $NFT_CONFIG 
+    fw4 reload
 }
 
 start_xray() {
-    add_routing_policy
-
-    add_iptables_prerouting_rules
-    add_iptables_output_rules
-
-    add_xray_user
+    add_policy_routing
+    add_xray_user_group
+    add_nft_config
 
     ulimit -SHn 1000000
-    sudo -u $XRAY_USER env XRAY_LOCATION_ASSET=$XRAY_ASSETS $XRAY_BINARY -c $XRAY_CONFIG >/dev/null 2>&1 &
-}
-
-start() {
-    if pgrep -x $XRAY_BINARY >/dev/null 2>&1; then
-        echo "xray is already running"
-        return 0
-    fi
-
-    start_xray
-}
-
-del_routing_policy() {
-    ip rule del fwmark $TPROXY_MARK table $TABLE_NUM
-    ip route del local default dev lo table $TABLE_NUM
-}
-
-del_iptables_prerouting_rules() {
-    iptables -t mangle -D PREROUTING -j XRAY
-
-    iptables -t mangle -F XRAY
-    iptables -t mangle -X XRAY
-}
-
-del_iptables_output_rules() {
-    iptables -t mangle -D OUTPUT -p tcp -j XRAY_MASK
-    iptables -t mangle -D OUTPUT -p udp -j XRAY_MASK
-
-    iptables -t mangle -F XRAY_MASK
-    iptables -t mangle -X XRAY_MASK
-}
-
-del_xray_user() {
-    grep -qw $XRAY_USER /etc/passwd && sed -i "/^$XRAY_USER:/d" /etc/passwd
+    XRAY_LOCATION_ASSET=$XRAY_ASSETS \
+    start-stop-daemon -S -b -q -m -p $XRAY_PIDFILE \
+        -c $XRAY_USER:$XRAY_GROUP \
+        -x $XRAY_BINARY -- -c $XRAY_CONFIG
 }
 
 stop_xray() {
-    del_routing_policy
+    start-stop-daemon -K -p $XRAY_PIDFILE -s TERM -q
+    rm -f $XRAY_PIDFILE
 
-    del_iptables_prerouting_rules
-    del_iptables_output_rules
+    del_policy_routing
+    del_xray_user_group
+    del_nft_config
+}
 
-    del_xray_user
+xray_running() {
+    start-stop-daemon -K -t -p $XRAY_PIDFILE -q
+}
 
-    killall xray
+download_geofiles() {
+    mkdir -p $XRAY_ASSETS
+    curl -fsSL $GEOIP_URL -o $XRAY_GEOIP
+    curl -fsSL $GEOSITE_URL -o $XRAY_GEOSITE
+}
+
+start() {
+    if xray_running; then
+        echo "xray is already running"
+        return 0
+    fi
+    start_xray
 }
 
 stop() {
     stop_xray
 }
 
+restart() {
+    stop_xray
+    start_xray
+}
+
 status() {
-    if pgrep -x $XRAY_BINARY >/dev/null 2>&1; then
+    if xray_running; then
         echo "xray is running"
     else
         echo "xray is stopped"
+    fi
+}
+
+update() {
+    local running=xray_running
+    stop
+    download_geofiles
+    if running; then
+        start
     fi
 }
