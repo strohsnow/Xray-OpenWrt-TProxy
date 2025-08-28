@@ -166,7 +166,7 @@ update() {
     local running=xray_running
     stop
     download_geofiles
-    if running; then
+    if $running; then
         start
     fi
 }
