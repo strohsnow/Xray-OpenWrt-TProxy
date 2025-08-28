@@ -163,10 +163,7 @@ status() {
 }
 
 update() {
-    local running=xray_running
     stop
     download_geofiles
-    if $running; then
-        start
-    fi
+    start
 }
