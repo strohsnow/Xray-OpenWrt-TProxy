@@ -18,7 +18,7 @@
   },
   "inbounds": [
     {
-      "tag": "tproxy-in",
+      "tag": "tproxy",
       "port": 12345,
       "protocol": "dokodemo-door",
       "settings": {
@@ -42,7 +42,7 @@
   "outbounds": [
     {
       "tag": "direct",
-      "protocol": "freedom",
+      "protocol": "direct",
       "settings": {
         "domainStrategy": "UseIPv4"
       }
@@ -71,7 +71,7 @@
         "realitySettings": {
           "fingerprint": "chrome",
           "serverName": "your.domain.com",
-          "publicKey": "YOUR_PUBLIC_KEY",
+          "publicKey": "your_public_key",
           "shortId": "",
           "spiderX": ""
         }
@@ -87,7 +87,7 @@
     "rules": [
       {
         "inboundTag": [
-          "tproxy-in"
+          "tproxy"
         ],
         "port": 53,
         "outboundTag": "dns"
