@@ -8,7 +8,6 @@
       {
         "address": "https://1.1.1.1/dns-query",
         "domains": [
-          "geosite:cloudflare",
           "geosite:ru-blocked"
         ]
       }
@@ -94,7 +93,13 @@
       },
       {
         "ip": [
-          "geoip:cloudflare",
+          "1.1.1.1"
+        ],
+        "port": 443,
+        "outboundTag": "proxy"
+      },
+      {
+        "ip": [
           "geoip:ru-blocked-community",
           "geoip:re-filter"
         ],
@@ -102,7 +107,6 @@
       },
       {
         "domain": [
-          "geosite:cloudflare",
           "geosite:ru-blocked"
         ],
         "outboundTag": "proxy"
