@@ -4,8 +4,8 @@
 - kmod-nft-tproxy
 - curl
 ### Installation
-- Copy `xray` to `/etc/init.d/xray`
-- Run `chmod +x /etc/init.d/xray`
 - Copy `config.json` to `/etc/xray/config.json`
 - Adjust `/etc/xray/config.json` accordingly
+- Copy `xray` to `/etc/init.d/xray`
+- Run `chmod +x /etc/init.d/xray`
 - Run `service xray update` to download geofiles and start xray
