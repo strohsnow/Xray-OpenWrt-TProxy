@@ -52,11 +52,11 @@
       "settings": {
         "vnext": [
           {
-            "address": "your.server.ipv4.address",
+            "address": "your.server.ip.address",
             "port": 443,
             "users": [
               {
-                "id": "your-user-uuid-on-server",
+                "id": "your-uuud",
                 "encryption": "none",
                 "flow": "xtls-rprx-vision"
               }
