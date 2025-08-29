@@ -133,8 +133,8 @@ xray_running() {
 
 download_geofiles() {
     mkdir -p $XRAY_ASSETS
-    curl -fsSL $GEOIP_URL -o $XRAY_GEOIP
-    curl -fsSL $GEOSITE_URL -o $XRAY_GEOSITE
+    curl -fSL $GEOIP_URL -o $XRAY_GEOIP
+    curl -fSL $GEOSITE_URL -o $XRAY_GEOSITE
 }
 
 start() {
