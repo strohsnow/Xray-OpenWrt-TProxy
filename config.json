@@ -4,7 +4,7 @@
   },
   "dns": {
     "servers": [
-      "https+local://8.8.8.8/dns-query",
+      "https://8.8.8.8/dns-query",
       {
         "address": "https://1.1.1.1/dns-query",
         "domains": [
@@ -92,6 +92,13 @@
         ],
         "port": 53,
         "outboundTag": "dns"
+      },
+      {
+        "ip": [
+          "8.8.8.8"
+        ],
+        "port": 443,
+        "outboundTag": "direct"
       },
       {
         "ip": [
