@@ -166,5 +166,7 @@ status() {
 
 update() {
     download_geofiles
-    restart
+    if xray_running; then
+        restart
+    fi
 }
