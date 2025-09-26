@@ -68,18 +68,10 @@ add_nft_config() {
     cat >$NFT_CONFIG <<EOF
 define res_subnets = { $SUBNET_RES }
 
-chain xray_divert {
-    type filter hook prerouting priority mangle - 10; policy accept;
-
-    socket transparent 1 meta skgid $XRAY_GID meta mark set $TPROXY_MARK
-}
-
 chain xray_prerouting {
     type filter hook prerouting priority mangle; policy accept;
 
-    ip saddr != \$lan_subnets return
     ip daddr \$res_subnets return
-
     ip daddr \$lan_subnets tcp dport != 53 return
     ip daddr \$lan_subnets udp dport != 53 return
 
@@ -90,12 +82,18 @@ chain xray_output {
     type route hook output priority mangle; policy accept;
 
     meta skgid $XRAY_GID return
-    ip daddr \$res_subnets return
 
+    ip daddr \$res_subnets return
     ip daddr \$lan_subnets tcp dport != 53 return
     ip daddr \$lan_subnets udp dport != 53 return
 
-    meta mark set $TPROXY_MARK
+    meta l4proto { tcp, udp } meta mark set $TPROXY_MARK
+}
+
+chain xray_divert {
+    type filter hook prerouting priority mangle - 10; policy accept;
+
+    socket transparent 1 meta skgid $XRAY_GID meta mark set $TPROXY_MARK
 }
 EOF
     fw4 reload
@@ -163,7 +161,6 @@ status() {
 }
 
 update() {
-    stop
     download_geofiles
-    start
+    restart
 }
