@@ -119,6 +119,7 @@ chain xray_output {
     type route hook output priority mangle; policy accept;
 
     meta skgid $XRAY_GID return
+
     ip daddr \$res_subnets_v4 return
     ip6 daddr \$res_subnets_v6 return
 
