@@ -3,6 +3,12 @@
     "loglevel": "none"
   },
   "dns": {
+    "hosts": {
+      "your.domain.com": [
+        "your.server.ipv4.address",
+        "your:server:ipv6:address"
+      ]
+    },
     "servers": [
       "https://8.8.8.8/dns-query",
       {
@@ -12,7 +18,7 @@
         ]
       }
     ],
-    "queryStrategy": "UseIPv4",
+    "queryStrategy": "UseIP",
     "disableFallbackIfMatch": true
   },
   "inbounds": [
@@ -45,7 +51,7 @@
       "tag": "direct",
       "protocol": "direct",
       "settings": {
-        "domainStrategy": "UseIPv4"
+        "domainStrategy": "UseIP"
       }
     },
     {
@@ -54,7 +60,7 @@
       "settings": {
         "vnext": [
           {
-            "address": "your.server.ip.address",
+            "address": "your.domain.com",
             "port": 443,
             "users": [
               {

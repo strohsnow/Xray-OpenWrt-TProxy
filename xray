@@ -6,9 +6,17 @@ EXTRA_COMMANDS="status update"
 EXTRA_HELP="        status          Show xray status
         update          Update xray geofiles"
 
-SUBNET_RES="10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 224.0.0.0/3"
+RES_SUBNETS_V4="10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, \
+192.0.0.0/24, 198.18.0.0/15, 224.0.0.0/3"
+RES_SUBNETS_V6="::1/128, ::ffff:0:0/96, 64:ff9b::/96, 64:ff9b:1::/48, 100::/64, \
+2001:20::/28, 5f00::/16, fc00::/7, fe80::/10, ff00::/8"
 
-TABLE_NUM=100
+# fw4 print | grep lan_subnets
+LAN_SUBNETS_V4="192.168.1.0/24"
+LAN_SUBNETS_V6="fd00::/8"
+
+TABLE_NUM_V4=104
+TABLE_NUM_V6=106
 TPROXY_MARK=0xff
 TPROXY_PORT=12345
 NFT_CONFIG="/etc/nftables.d/xray.nft"
@@ -29,20 +37,34 @@ GEOIP_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat
 GEOSITE_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geosite.dat"
 
 add_policy_routing() {
-    if ! ip rule list | grep -q "fwmark $TPROXY_MARK lookup $TABLE_NUM"; then
-        ip rule add fwmark $TPROXY_MARK table $TABLE_NUM
+    if ! ip rule list | grep -q "fwmark $TPROXY_MARK lookup $TABLE_NUM_V4"; then
+        ip rule add fwmark $TPROXY_MARK table $TABLE_NUM_V4
     fi
-    if ! ip route show table $TABLE_NUM | grep -q "local default dev lo"; then
-        ip route add local default dev lo table $TABLE_NUM
+    if ! ip -6 rule list | grep -q "fwmark $TPROXY_MARK lookup $TABLE_NUM_V6"; then
+        ip -6 rule add fwmark $TPROXY_MARK table $TABLE_NUM_V6
+    fi
+
+    if ! ip route show table all | grep -q "local default dev lo table $TABLE_NUM_V4"; then
+        ip route add local default dev lo table $TABLE_NUM_V4
+    fi
+    if ! ip -6 route show table all | grep -q "local default dev lo table $TABLE_NUM_V6"; then
+        ip -6 route add local default dev lo table $TABLE_NUM_V6
     fi
 }
 
 del_policy_routing() {
-    if ip rule list | grep -q "fwmark $TPROXY_MARK lookup $TABLE_NUM"; then
-        ip rule del fwmark $TPROXY_MARK table $TABLE_NUM
+    if ip rule list | grep -q "fwmark $TPROXY_MARK lookup $TABLE_NUM_V4"; then
+        ip rule del fwmark $TPROXY_MARK table $TABLE_NUM_V4
     fi
-    if ip route show table $TABLE_NUM | grep -q "local default dev lo"; then
-        ip route del local default dev lo table $TABLE_NUM
+    if ip -6 rule list | grep -q "fwmark $TPROXY_MARK lookup $TABLE_NUM_V6"; then
+        ip -6 rule del fwmark $TPROXY_MARK table $TABLE_NUM_V6
+    fi
+
+    if ip route show table all | grep -q "local default dev lo table $TABLE_NUM_V4"; then
+        ip route del local default dev lo table $TABLE_NUM_V4
+    fi
+    if ip -6 route show table all | grep -q "local default dev lo table $TABLE_NUM_V6"; then
+        ip -6 route del local default dev lo table $TABLE_NUM_V6
     fi
 }
 
@@ -66,30 +88,45 @@ del_xray_user_group() {
 
 add_nft_config() {
     cat >$NFT_CONFIG <<EOF
-define res_subnets = { $SUBNET_RES }
+define lan_subnets_v4 = { $LAN_SUBNETS_V4 }
+define lan_subnets_v6 = { $LAN_SUBNETS_V6 }
+define res_subnets_v4 = { $RES_SUBNETS_V4 }
+define res_subnets_v6 = { $RES_SUBNETS_V6 }
 
 chain xray_prerouting {
     type filter hook prerouting priority mangle; policy accept;
 
     meta l4proto { tcp, udp } meta mark $TPROXY_MARK tproxy ip to 127.0.0.1:$TPROXY_PORT
+    meta l4proto { tcp, udp } meta mark $TPROXY_MARK tproxy ip6 to [::1]:$TPROXY_PORT
 
-    ip saddr != \$lan_subnets return
-    ip daddr \$res_subnets return
+    ip saddr != \$lan_subnets_v4 return
+    ip6 saddr != \$lan_subnets_v6 return
 
-    ip daddr \$lan_subnets tcp dport != 53 return
-    ip daddr \$lan_subnets udp dport != 53 return
+    ip daddr \$res_subnets_v4 return
+    ip6 daddr \$res_subnets_v6 return
+
+    ip daddr \$lan_subnets_v4 tcp dport != 53 return
+    ip6 daddr \$lan_subnets_v6 tcp dport != 53 return
+
+    ip daddr \$lan_subnets_v4 udp dport != 53 return
+    ip6 daddr \$lan_subnets_v6 udp dport != 53 return
 
     meta l4proto { tcp, udp } tproxy ip to 127.0.0.1:$TPROXY_PORT meta mark set $TPROXY_MARK
+    meta l4proto { tcp, udp } tproxy ip6 to [::1]:$TPROXY_PORT meta mark set $TPROXY_MARK
 }
 
 chain xray_output {
     type route hook output priority mangle; policy accept;
 
     meta skgid $XRAY_GID return
-    ip daddr \$res_subnets return
+    ip daddr \$res_subnets_v4 return
+    ip6 daddr \$res_subnets_v6 return
 
-    ip daddr \$lan_subnets tcp dport != 53 return
-    ip daddr \$lan_subnets udp dport != 53 return
+    ip daddr \$lan_subnets_v4 tcp dport != 53 return
+    ip6 daddr \$lan_subnets_v6 tcp dport != 53 return
+
+    ip daddr \$lan_subnets_v4 udp dport != 53 return
+    ip6 daddr \$lan_subnets_v6 udp dport != 53 return
 
     meta l4proto { tcp, udp } meta mark set $TPROXY_MARK
 }
@@ -166,7 +203,4 @@ status() {
 
 update() {
     download_geofiles
-    if xray_running; then
-        restart
-    fi
 }
