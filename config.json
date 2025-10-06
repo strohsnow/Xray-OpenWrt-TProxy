@@ -3,12 +3,6 @@
     "loglevel": "none"
   },
   "dns": {
-    "hosts": {
-      "your.domain.com": [
-        "your.server.ipv4.address",
-        "your:server:ipv6:address"
-      ]
-    },
     "servers": [
       "https://8.8.8.8/dns-query",
       {
@@ -115,8 +109,7 @@
       },
       {
         "ip": [
-          "geoip:ru-blocked-community",
-          "geoip:re-filter"
+          "geoip:ru-blocked"
         ],
         "outboundTag": "proxy"
       },
