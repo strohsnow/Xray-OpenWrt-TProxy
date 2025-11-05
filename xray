@@ -99,8 +99,12 @@ chain xray_prerouting {
     meta l4proto { tcp, udp } meta mark $TPROXY_MARK tproxy ip to 127.0.0.1:$TPROXY_PORT
     meta l4proto { tcp, udp } meta mark $TPROXY_MARK tproxy ip6 to [::1]:$TPROXY_PORT
 
+    ct direction reply return
+
     ip saddr != \$lan_subnets_v4 return
     ip6 saddr != \$lan_subnets_v6 return
+
+    fib daddr type local return
 
     ip daddr \$res_subnets_v4 return
     ip6 daddr \$res_subnets_v6 return
