@@ -2,6 +2,8 @@
 - [xray-core](https://github.com/yichya/openwrt-xray)
 - kmod-nft-socket
 - kmod-nft-tproxy
+- kmod-nft-fib
+- kmod-nf-conntrack
 - curl
 ### Installation
 - Copy `config.json` to `/etc/xray/config.json`
