@@ -45,7 +45,7 @@
       "tag": "direct",
       "protocol": "direct",
       "settings": {
-        "domainStrategy": "UseIP"
+        "domainStrategy": "ForceIPv4v6"
       }
     },
     {
@@ -70,11 +70,9 @@
         "network": "raw",
         "security": "reality",
         "realitySettings": {
-          "fingerprint": "chrome",
           "serverName": "your.domain.com",
-          "publicKey": "your_public_key",
-          "shortId": "",
-          "spiderX": ""
+          "password": "your_public_key",
+          "shortId": ""
         }
       }
     },
